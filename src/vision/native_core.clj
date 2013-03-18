@@ -1,6 +1,6 @@
 (ns vision.native-core
   (:use
-    [seesaw core :as w]
+    [seesaw.core :as w]
     )
   (:import 
     [org.opencv.core Mat MatOfByte CvType Scalar] 
@@ -9,18 +9,6 @@
   )
 
 (clojure.lang.RT/loadLibrary "opencv_java")
-
-(defn view 
-  [buff-img & more]
-  (let [grid (w/grid-panel
-               :border 5
-               :hgap 10 :vgap 10
-               :columns (min 6 (max 1 (count more))) 
-               :items (map #(w/label :icon %) (conj more buff-img)))]
-    (-> (w/frame :title "Image Viewer" 
-                 :content grid)
-        w/pack!
-        w/show!))) 
 
 (defn load-image
   "Loads an image from a file and returns a Mat object.
@@ -34,20 +22,38 @@
                      :grayscale Highgui/CV_LOAD_IMAGE_GRAYSCALE
                      :any-depth Highgui/CV_LOAD_IMAGE_ANYDEPTH
                      ;; Returns the loaded image as is (with alpha channel).
-                     :original -1))))
+                     :original -1
+                     ;; Default value.
+                     1))))
 
 (defn encode-image
+  "Encodes an image into a specific format."
   ([img ext] (encode-image img ext nil))
   ([img ext param]
    (let [encod-img (MatOfByte.)]
      (Highgui/imencode ext img encod-img)
      encod-img)))
 
-(defn to-buffedimage
+(defn to-bufferedimage
   [img]
-  (->> (MatOfByte. img)
+  (->> (encode-image img ".jpeg")
        (.toArray)
        (java.io.ByteArrayInputStream.)
-       (javax.imageio.ImageIO/read)
-       )
-  )
+       (javax.imageio.ImageIO/read)))
+
+(defn view 
+  "Shows the images on a grid-panel window."
+  [& imgs]
+  (let [buff-imgs (map #(if (instance? java.awt.image.BufferedImage %)
+                          %
+                          (to-buffedimage %))
+                       imgs)
+        grid (w/grid-panel
+               :border 5
+               :hgap 10 :vgap 10
+               :columns (min 6 (max 1 (count imgs))) 
+               :items (map #(w/label :icon %) buff-imgs))]
+    (-> (w/frame :title "Image Viewer" 
+                 :content grid)
+        w/pack!
+        w/show!)))
