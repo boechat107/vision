@@ -4,6 +4,7 @@
     )
   (:import 
     [org.opencv.core Mat MatOfByte CvType Scalar] 
+    [org.opencv.imgproc Imgproc]
     [org.opencv.highgui Highgui]
     )
   )
@@ -46,7 +47,7 @@
   [& imgs]
   (let [buff-imgs (map #(if (instance? java.awt.image.BufferedImage %)
                           %
-                          (to-buffedimage %))
+                          (to-bufferedimage %))
                        imgs)
         grid (w/grid-panel
                :border 5
@@ -57,3 +58,39 @@
                  :content grid)
         w/pack!
         w/show!)))
+
+(defn- apply-to-newmat
+  "Creates a new Mat object, applies the given function on it and returns the object."
+  [f]
+  (doto (Mat.) f))
+
+(defn convert-color
+  "Converts an image from one color space to another and returns the converted image.
+  Possible values of key-type:
+      :bgr->gray
+"
+  [img key-type]
+  (let [res (Mat.)
+        apply-color (fn [k] (Imgproc/cvtColor img res k))]
+    (apply-color (condp = key-type
+                   :bgr->gray Imgproc/COLOR_BGR2GRAY))
+    res))
+
+(defn threshold
+  "Returns the image resulting of the applying a fixed level threshold to the given
+  image.
+  Possible types of threshold:
+      :bin, :bin-inv, :trucate, :zero, :zero-inv"
+  ([img th-val] (threshold img th-val 255 :bin))
+  ([img th-val max-val type]
+   (apply-to-newmat 
+     #(Imgproc/threshold img % th-val max-val
+                         (condp = type 
+                           :bin Imgproc/THRESH_BINARY
+                           :bin-inv Imgproc/THRESH_BINARY_INV
+                           :truncate Imgproc/THRESH_TRUNC
+                           :zero Imgproc/THRESH_TOZERO
+                           :zero-inv Imgproc/THRESH_TOZERO_INV)))))
+
+;; Todo: macro to thread an image through functions and visualize each partial
+;; resulting image.
