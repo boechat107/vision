@@ -121,5 +121,30 @@
                         (MatOfInt. (int-array [bins])) 
                         (MatOfFloat. (float-array [0.0 255.0]))))))
 
+(defn concentration-histogram
+  "Counts the number of non-white pixels on the columns or rows of an image. The image 
+  is expected to be in grayscale or black-white.
+  dim values:
+      :row    The pixels of each row are grouped. 
+      :col    Pixels of each column are grouped."
+  [img th-val dim]
+  (letfn [(is-white [rc]
+            (-> (.get img (:row rc) (:col rc))
+                (aget 0)
+                (> th-val))) 
+          (inc-1 [val rc]
+            (if (is-white rc)
+              val
+              (if val (inc val) 1)))] 
+    (reduce #(update-in %1 [(dim %2)] inc-1 %2) 
+      []
+      (for [r (range (.rows img))
+            c (range (.cols img))]
+        {:row r, :col c})
+      ))
+  )
+
 ;; Todo: macro to thread an image through functions and visualize each partial
 ;; resulting image.
+
+;; todo: type hints, pre and pro validation 
