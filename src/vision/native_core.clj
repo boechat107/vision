@@ -3,13 +3,29 @@
     [seesaw.core :as w]
     )
   (:import 
-    [org.opencv.core Mat MatOfByte CvType Scalar] 
+    [org.opencv.core Mat MatOfByte MatOfInt MatOfFloat CvType Scalar] 
     [org.opencv.imgproc Imgproc]
     [org.opencv.highgui Highgui]
     )
   )
 
 (clojure.lang.RT/loadLibrary "opencv_java")
+
+(defn mat-to-coll
+  "Converts a Mat object to a clojure collection."
+  [mat]
+  (when (.isContinuous mat)
+    (let [get-pixel (fn [r c] 
+                      (if (> (.channels mat) 1)
+                        (vec (.get mat r c))
+                        (aget (.get mat r c) 0)))]
+      (if (> (.cols mat) 1)
+        ;; mat is really a matrix.
+        (map (fn [row] 
+               (map #(get-pixel row %) (.cols mat)))
+             (range (.rows mat)))
+        ;; mat is a column vector.
+        (map #(get-pixel % 0) (range (.rows mat)))))))
 
 (defn load-image
   "Loads an image from a file and returns a Mat object.
@@ -91,6 +107,19 @@
                            :truncate Imgproc/THRESH_TRUNC
                            :zero Imgproc/THRESH_TOZERO
                            :zero-inv Imgproc/THRESH_TOZERO_INV)))))
+
+(defn histogram
+  "Calculates the histogram of an image using the opencv method calcHist. It shows
+  the number of pixels of a specific color level or intensity.
+  bins gives the number of levels to be considered."
+  ([img bins]
+   (apply-to-newmat 
+     #(Imgproc/calcHist [img]
+                        (MatOfInt. (int-array [0]))
+                        (Mat.)
+                        %
+                        (MatOfInt. (int-array [bins])) 
+                        (MatOfFloat. (float-array [0.0 255.0]))))))
 
 ;; Todo: macro to thread an image through functions and visualize each partial
 ;; resulting image.
