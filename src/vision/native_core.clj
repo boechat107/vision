@@ -134,7 +134,7 @@
                 (> th-val))) 
           (inc-1 [val rc]
             (if (is-white rc)
-              val
+              (if val val 0)
               (if val (inc val) 1)))] 
     (reduce #(update-in %1 [(dim %2)] inc-1 %2) 
       []
